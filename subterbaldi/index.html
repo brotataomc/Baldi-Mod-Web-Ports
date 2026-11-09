@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Subterbaldi</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080808;font-family:Arial,Helvetica,sans-serif}
+#gameContainer{position:fixed;inset:0;width:100%;height:100%;background:#080808}
+#unity-canvas{width:100%;height:100%;display:block;background:#000}
+#loadingScreen{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 42%,#242424 0%,#111 38%,#050505 78%);color:white;transition:opacity .45s ease,visibility .45s ease}
+#loadingScreen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.loadingBox{width:min(620px,88vw);text-align:center}
+.title{margin:0 0 8px;font-size:clamp(38px,7vw,72px);font-weight:900;letter-spacing:3px;text-transform:uppercase;text-shadow:0 4px 20px rgba(0,0,0,.8)}
+.subtitle{margin:0 0 34px;color:#bdbdbd;font-size:14px;letter-spacing:2px}
+.spinner{width:48px;height:48px;margin:0 auto 24px;border:5px solid rgba(255,255,255,.18);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.barOuter{width:100%;height:12px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.12);box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
+#progressBar{width:0%;height:100%;border-radius:inherit;background:white;transition:width .15s ease}
+#progressText{margin-top:12px;font-size:15px;font-weight:bold;letter-spacing:1px}
+#status{min-height:20px;margin-top:18px;color:#999;font-size:13px}
+#error{display:none;margin-top:20px;padding:12px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(0,0,0,.45);color:#ff8f8f;font-size:13px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="unity-canvas" tabindex="-1"></canvas>
+<div id="loadingScreen"><div class="loadingBox">
+<h1 class="title">Subterbaldi</h1>
+<p class="subtitle">UNITY WEBGL</p>
+<div class="spinner"></div>
+<div class="barOuter"><div id="progressBar"></div></div>
+<div id="progressText">0%</div>
+<div id="status">Loading game...</div>
+<div id="error"></div>
+</div></div>
+</div>
+<script>
+const buildUrl="Build";
+const canvas=document.getElementById("unity-canvas");
+const loadingScreen=document.getElementById("loadingScreen");
+const progressBar=document.getElementById("progressBar");
+const progressText=document.getElementById("progressText");
+const statusText=document.getElementById("status");
+const errorBox=document.getElementById("error");
+
+const config={
+ dataUrl:buildUrl+"/subterbaldi.data",
+ frameworkUrl:buildUrl+"/subterbaldi.framework.js",
+ codeUrl:buildUrl+"/subterbaldi.wasm",
+ streamingAssetsUrl:"StreamingAssets",
+ companyName:"DefaultCompany",
+ productName:"Subterbaldi",
+ productVersion:"1.0"
+};
+
+function setProgress(value){
+ const percent=Math.max(0,Math.min(100,Math.round(value*100)));
+ progressBar.style.width=percent+"%";
+ progressText.textContent=percent+"%";
+ statusText.textContent=percent<30?"Loading game...":percent<70?"Downloading game data...":percent<100?"Preparing Subterbaldi...":"Starting game...";
+}
+function showError(message){
+ errorBox.style.display="block";
+ errorBox.textContent="Could not load the game.\n\n"+message;
+ statusText.textContent="Loading failed.";
+ document.querySelector(".spinner").style.display="none";
+}
+const loader=document.createElement("script");
+loader.src=buildUrl+"/subterbaldi.loader.js";
+loader.onload=function(){
+ if(typeof createUnityInstance!=="function"){showError("Unity's createUnityInstance function was not found.");return;}
+ createUnityInstance(canvas,config,setProgress).then(function(unityInstance){
+   setProgress(1);
+   setTimeout(function(){loadingScreen.classList.add("hidden");},350);
+   window.unityInstance=unityInstance;
+ }).catch(function(message){showError(message);});
+};
+loader.onerror=function(){showError("Could not load Build/subterbaldi.loader.js. Check that all Unity build files are in the Build folder.");};
+document.body.appendChild(loader);
+</script>
+</body>
+</html>

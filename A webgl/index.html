@@ -7,19 +7,69 @@
   </head>
   <body style="text-align: center">
     <canvas id="unity-canvas" width=960 height=600 style="width: 960px; height: 600px; background: #000000"></canvas>
-    <script src="Build/A webgl.loader.js"></script>
+
+    <!-- Error log panel -->
+    <pre id="error-log" style="display:none; text-align:left; margin:10px auto; width:940px; max-height:250px; overflow:auto; padding:10px; background:#1e1e1e; color:#ff6b6b; font-size:13px; white-space:pre-wrap;"></pre>
+
     <script>
-      createUnityInstance(document.querySelector("#unity-canvas"), {
-        dataUrl: "Build/A webgl.data",
-        frameworkUrl: "Build/A webgl.framework.js",
-        codeUrl: "Build/A webgl.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "AAAA",
-        productVersion: "1.4.3",
-        // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
-        // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
+      // Log helper: writes to the page and the console
+      function logError(msg) {
+        console.error(msg);
+        var box = document.getElementById("error-log");
+        box.style.display = "block";
+        box.textContent += "[" + new Date().toLocaleTimeString() + "] " + msg + "\n";
+      }
+
+      // Catch uncaught JS errors
+      window.addEventListener("error", function (e) {
+        logError("JS error: " + e.message + (e.filename ? " (" + e.filename + ":" + e.lineno + ")" : ""));
       });
+
+      // Catch unhandled promise rejections
+      window.addEventListener("unhandledrejection", function (e) {
+        logError("Unhandled promise rejection: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+      });
+
+      // Check that each build file can actually be fetched
+      [
+        "Build/A webgl.loader.js",
+        "Build/A webgl.data",
+        "Build/A webgl.framework.js",
+        "Build/A webgl.wasm"
+      ].forEach(function (url) {
+        fetch(url, { method: "HEAD" })
+          .then(function (r) {
+            if (!r.ok) logError("File problem: " + url + " returned HTTP " + r.status + " " + r.statusText);
+          })
+          .catch(function (err) {
+            logError("File problem: could not reach " + url + " (" + err.message + ")");
+          });
+      });
+    </script>
+
+    <script src="Build/A webgl.loader.js" onerror="logError('Failed to load Build/A webgl.loader.js (wrong path/name, or file missing)')"></script>
+    <script>
+      if (typeof createUnityInstance !== "function") {
+        logError("createUnityInstance is not defined: the loader script did not load.");
+      } else {
+        createUnityInstance(document.querySelector("#unity-canvas"), {
+          dataUrl: "Build/A webgl.data",
+          frameworkUrl: "Build/A webgl.framework.js",
+          codeUrl: "Build/A webgl.wasm",
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "DefaultCompany",
+          productName: "AAAA",
+          productVersion: "1.4.3",
+          // matchWebGLToCanvasSize: false,
+          // devicePixelRatio: 1,
+        }, function (progress) {
+          console.log("Loading: " + Math.round(progress * 100) + "%");
+        }).then(function (instance) {
+          console.log("Unity instance created.");
+        }).catch(function (err) {
+          logError("Unity failed to start: " + (err && err.message ? err.message : err));
+        });
+      }
     </script>
   </body>
 </html>
